@@ -1,0 +1,22 @@
+{
+  "csvPath": "tests/fixtures/sales.csv",
+  "maxRows": 50000,
+  "maxResultRows": 100,
+  "plan": {
+    "operation": "aggregate",
+    "filters": [
+      {
+        "column": "order_date",
+        "op": "between",
+        "value": ["2025-01-01", "2025-12-31"]
+      }
+    ],
+    "groupBy": ["product"],
+    "metrics": [{ "column": "revenue", "agg": "sum" }],
+    "select": [],
+    "sortBy": "sum_revenue",
+    "sortDirection": "desc",
+    "limit": 10,
+    "rationale": "Sum revenue by product for orders placed in 2025."
+  }
+}

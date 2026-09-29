@@ -1,0 +1,22 @@
+{
+  "csvPath": "tests/fixtures/sales.csv",
+  "maxRows": 50000,
+  "maxResultRows": 100,
+  "plan": {
+    "operation": "trend",
+    "filters": [
+      {
+        "column": "order_date",
+        "op": "between",
+        "value": ["2025-01-01", "2025-12-31"]
+      }
+    ],
+    "groupBy": [],
+    "metrics": [{ "column": "revenue", "agg": "sum" }],
+    "timeColumn": "order_date",
+    "grain": "month",
+    "select": [],
+    "limit": 24,
+    "rationale": "Sum revenue by month for 2025."
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "csvPath": "tests/fixtures/sales.csv",
+  "datasetId": "sales-demo",
+  "fileName": "sales.csv",
+  "maxRows": 50000
+}

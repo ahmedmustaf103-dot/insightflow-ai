@@ -1,0 +1,16 @@
+{
+  "csvPath": "tests/fixtures/sales.csv",
+  "maxRows": 50000,
+  "maxResultRows": 100,
+  "plan": {
+    "operation": "detail",
+    "filters": [{ "column": "region", "op": "eq", "value": "North" }],
+    "groupBy": [],
+    "metrics": [],
+    "select": ["product", "revenue", "order_date"],
+    "sortBy": "revenue",
+    "sortDirection": "desc",
+    "limit": 3,
+    "rationale": "Show the highest-revenue North orders."
+  }
+}

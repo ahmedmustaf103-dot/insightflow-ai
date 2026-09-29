@@ -1,0 +1,16 @@
+{
+  "csvPath": "tests/fixtures/sales.csv",
+  "maxRows": 50000,
+  "maxResultRows": 100,
+  "plan": {
+    "operation": "trend",
+    "filters": [],
+    "groupBy": [],
+    "metrics": [{ "column": "revenue", "agg": "sum" }],
+    "timeColumn": "order_date",
+    "grain": "year",
+    "select": [],
+    "limit": 10,
+    "rationale": "Sum revenue by calendar year."
+  }
+}
