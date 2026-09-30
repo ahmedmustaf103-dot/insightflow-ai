@@ -82,4 +82,42 @@ describe("chart spec", () => {
       }).chart,
     ).toEqual({ type: "table" });
   });
+
+  it("uses a table when the result is empty or has more than one metric", () => {
+    const grouped = plan({
+      operation: "aggregate",
+      groupBy: ["product"],
+      metrics: [
+        { column: "revenue", agg: "sum" },
+        { column: "revenue", agg: "mean" },
+      ],
+    });
+    const twoMetrics = rows({
+      columns: [
+        { name: "product", type: "string" },
+        { name: "sum_revenue", type: "number" },
+        { name: "mean_revenue", type: "number" },
+      ],
+      rows: [{ product: "Sensor", sum_revenue: 500, mean_revenue: 250 }],
+    });
+    const empty = rows({
+      columns: [
+        { name: "product", type: "string" },
+        { name: "sum_revenue", type: "number" },
+      ],
+      rows: [],
+    });
+
+    expect(deriveChartSpec(grouped, twoMetrics)).toEqual({ type: "table" });
+    expect(
+      deriveChartSpec(
+        plan({
+          operation: "aggregate",
+          groupBy: ["product"],
+          metrics: [{ column: "revenue", agg: "sum" }],
+        }),
+        empty,
+      ),
+    ).toEqual({ type: "table" });
+  });
 });

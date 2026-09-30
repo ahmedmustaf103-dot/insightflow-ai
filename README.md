@@ -2,7 +2,7 @@
 
 Ask a question about a CSV. Pandas calculates the result. Later phases will let a model plan and explain that result, without inventing numbers.
 
-Phase 1 is the deterministic foundation: dataset profiling and a closed analysis catalog (`aggregate`, `trend`, `detail`). There is no LLM, upload UI, or database yet.
+Phase 1 profiles a CSV and runs a closed Pandas catalog (`aggregate`, `trend`, `detail`). Phase 2 orchestrates that catalog with a mock model: the model proposes a plan and explains the result, and claim checks reject numbers that are not in the result. There is no Gemini, upload UI, or database yet.
 
 ## Setup
 

@@ -23,30 +23,92 @@ export const datasetProfileSchema = z.object({
 
 const scalarValueSchema = z.union([z.string(), z.number(), z.boolean()]);
 
-export const filterSchema = z.object({
-  column: z.string().min(1),
-  op: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "in", "between"]),
-  value: z.union([scalarValueSchema, z.array(z.union([z.string(), z.number()]))]),
-});
+export const filterSchema = z
+  .object({
+    column: z.string().min(1),
+    op: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "in", "between"]),
+    value: z.union([scalarValueSchema, z.array(z.union([z.string(), z.number()]))]),
+  })
+  .strict();
 
-export const metricSchema = z.object({
-  column: z.string().min(1).optional(),
-  agg: z.enum(["sum", "mean", "count", "min", "max"]),
-});
+export const metricSchema = z
+  .object({
+    column: z.string().min(1).optional(),
+    agg: z.enum(["sum", "mean", "count", "min", "max"]),
+  })
+  .strict();
 
-export const analysisPlanSchema = z.object({
-  operation: z.enum(["aggregate", "trend", "detail"]),
-  filters: z.array(filterSchema),
-  groupBy: z.array(z.string().min(1)),
-  metrics: z.array(metricSchema),
-  timeColumn: z.string().min(1).optional(),
-  grain: z.enum(["year", "quarter", "month"]).optional(),
-  select: z.array(z.string().min(1)),
-  sortBy: z.string().min(1).optional(),
-  sortDirection: z.enum(["asc", "desc"]).optional(),
-  limit: z.number().int().min(1),
-  rationale: z.string(),
-});
+export const analysisPlanSchema = z
+  .object({
+    operation: z.enum(["aggregate", "trend", "detail"]),
+    filters: z.array(filterSchema),
+    groupBy: z.array(z.string().min(1)),
+    metrics: z.array(metricSchema),
+    timeColumn: z.string().min(1).optional(),
+    grain: z.enum(["year", "quarter", "month"]).optional(),
+    select: z.array(z.string().min(1)),
+    sortBy: z.string().min(1).optional(),
+    sortDirection: z.enum(["asc", "desc"]).optional(),
+    limit: z.number().int().min(1),
+    rationale: z.string(),
+  })
+  .strict()
+  .superRefine((plan, ctx) => {
+    const issue = (path: Array<string | number>, message: string) => {
+      ctx.addIssue({ code: "custom", path, message });
+    };
+
+    if (/[£$€]/.test(plan.rationale)) {
+      issue(["rationale"], "Plan rationale must not include calculated amounts.");
+    }
+
+    if (new Set(plan.groupBy).size !== plan.groupBy.length) {
+      issue(["groupBy"], "Group-by columns must be unique.");
+    }
+    if (new Set(plan.select).size !== plan.select.length) {
+      issue(["select"], "Selected columns must be unique.");
+    }
+
+    const metricNames = plan.metrics.map((metric) =>
+      metric.agg === "count" && !metric.column ? "count" : `${metric.agg}_${metric.column ?? ""}`,
+    );
+    if (new Set(metricNames).size !== metricNames.length) {
+      issue(["metrics"], "Metric output names must be unique.");
+    }
+
+    for (const [index, metric] of plan.metrics.entries()) {
+      if (metric.agg !== "count" && !metric.column) {
+        issue(["metrics", index, "column"], `${metric.agg} requires a column.`);
+      }
+    }
+
+    if (plan.operation === "aggregate") {
+      if (plan.metrics.length === 0) {
+        issue(["metrics"], "Aggregate requires at least one metric.");
+      }
+      if (plan.select.length > 0) {
+        issue(["select"], "Aggregate does not select source columns.");
+      }
+      if (plan.timeColumn || plan.grain) {
+        issue(["operation"], "Aggregate does not use a time grain.");
+      }
+    }
+
+    if (plan.operation === "trend") {
+      if (!plan.timeColumn) issue(["timeColumn"], "Trend requires a time column.");
+      if (!plan.grain) issue(["grain"], "Trend requires a grain.");
+      if (plan.metrics.length === 0) issue(["metrics"], "Trend requires at least one metric.");
+      if (plan.groupBy.length > 0) issue(["groupBy"], "Trend groups by the time grain only.");
+      if (plan.select.length > 0) issue(["select"], "Trend does not select source columns.");
+    }
+
+    if (plan.operation === "detail") {
+      if (plan.select.length === 0) issue(["select"], "Detail requires at least one selected column.");
+      if (plan.metrics.length > 0) issue(["metrics"], "Detail does not aggregate.");
+      if (plan.groupBy.length > 0) issue(["groupBy"], "Detail does not group.");
+      if (plan.timeColumn || plan.grain) issue(["operation"], "Detail does not use a time grain.");
+    }
+  });
 
 export const cellSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
