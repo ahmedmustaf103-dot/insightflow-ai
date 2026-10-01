@@ -1,8 +1,46 @@
 # InsightFlow AI
 
-Ask a question about a CSV. Pandas calculates the result. Later phases will let a model plan and explain that result, without inventing numbers.
+Ask a question about a CSV. A model plans the analysis and explains the result. Pandas calculates it.
 
-Phase 1 profiles a CSV and runs a closed Pandas catalog (`aggregate`, `trend`, `detail`). Phase 2 orchestrates that catalog with a mock model: the model proposes a plan and explains the result, and claim checks reject numbers that are not in the result. There is no Gemini, upload UI, or database yet.
+Phase 1 profiles a CSV and runs a closed Pandas catalog (`aggregate`, `trend`, `detail`). Phase 2 orchestrates that catalog with validation and a mock model. Phase 3 adds a Gemini provider behind the same interface. There is no upload UI or database yet.
+
+## Architecture
+
+### Why the LLM does not calculate
+
+The LLM produces a structured analysis plan, while deterministic Pandas operations perform the actual calculation. Gemini can read the question and the dataset profile, propose an `AnalysisPlan`, and later explain a validated `AnalysisResult`. It does not receive the raw CSV, generate Python, execute code, or choose the chart.
+
+### Why validation exists
+
+Plans are validated against the dataset profile before execution. Results are validated before explanation. Numerical claims are checked against the executed result before being returned. If the first plan is invalid, the orchestrator makes one repair request and then stops. A failed repair does not execute Python and does not invent an answer.
+
+A normal question uses two Gemini calls: one plan and one explanation. An invalid first plan adds one repair call. That is the maximum.
+
+### Provider architecture
+
+```text
+LLMProvider
+├── MockLLMProvider
+└── GeminiLLMProvider
+```
+
+The orchestrator depends on `LLMProvider` only, so the AI layer is replaceable and testable. Unit tests use `MockLLMProvider` and do not need an API key. `GEMINI_API_KEY` stays on the server. `GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`.
+
+Live pipeline:
+
+```text
+question
+ → Gemini plan
+ → Zod validation
+ → semantic plan validation
+ → one repair attempt if required
+ → Pandas execution
+ → result validation
+ → Gemini explanation
+ → claim verification
+ → deterministic chart selection
+ → AnalysisResponse
+```
 
 ## Setup
 
@@ -20,6 +58,8 @@ Requires Python 3.11+. The TypeScript runner uses `.venv/bin/python` when `PYTHO
 npm run typecheck
 npm test
 ```
+
+`npm test` never calls Gemini. With `GEMINI_API_KEY` set, `npm run test:live` runs the opted-in revenue question against `tests/fixtures/sales.csv`. Copy `.env.example` to `.env.local` for local live runs. Do not commit the key.
 
 ## Demo
 

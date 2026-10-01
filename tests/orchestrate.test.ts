@@ -26,6 +26,7 @@ describe("orchestrate", () => {
     const provider: LLMProvider = {
       id: llm.id,
       createPlan: (input) => llm.createPlan(input),
+      repairPlan: (input) => llm.repairPlan(input),
       explain: async (input) => {
         seen.push(input);
         return llm.explain(input);
@@ -137,6 +138,7 @@ describe("orchestrate", () => {
         llm: {
           id: "bad-shape",
           createPlan: async () => ({ operation: "aggregate", total: 999 }) as never,
+          repairPlan: async () => ({ operation: "aggregate" }) as never,
           explain: async () => "unused",
         },
         executeAnalysis: execute,
@@ -185,6 +187,7 @@ describe("orchestrate", () => {
         llm: {
           id: "mock",
           createPlan: (input) => new MockLLMProvider().createPlan(input),
+          repairPlan: (input) => new MockLLMProvider().repairPlan(input),
           explain,
         },
         executeAnalysis: async () => ({

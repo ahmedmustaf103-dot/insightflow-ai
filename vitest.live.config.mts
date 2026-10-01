@@ -6,7 +6,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**", "**/.git/**", "tests/live/**"],
+    include: ["tests/live/**/*.test.ts"],
+    testTimeout: 90_000,
   },
 });

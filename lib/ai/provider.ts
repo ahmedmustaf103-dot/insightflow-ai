@@ -11,6 +11,13 @@ export type ExplainInput = {
   result: AnalysisResult;
 };
 
+export type RepairPlanInput = {
+  question: string;
+  profile: DatasetProfile;
+  invalidPlan: unknown;
+  errors: unknown;
+};
+
 /**
  * The model proposes a plan and explains a result.
  * It does not receive the CSV and it does not calculate.
@@ -18,5 +25,6 @@ export type ExplainInput = {
 export interface LLMProvider {
   readonly id: string;
   createPlan(input: CreatePlanInput): Promise<AnalysisPlan>;
+  repairPlan(input: RepairPlanInput): Promise<AnalysisPlan>;
   explain(input: ExplainInput): Promise<string>;
 }

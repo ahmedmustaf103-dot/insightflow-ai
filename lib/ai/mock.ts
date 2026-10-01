@@ -1,6 +1,7 @@
 import { AnalysisFailure } from "@/lib/analysis/errors";
 import type { AnalysisPlan, AnalysisResult } from "@/lib/analysis/types";
-import type { ExplainInput, LLMProvider } from "@/lib/ai/provider";
+import { analysisPlanSchema } from "@/lib/analysis/types";
+import type { CreatePlanInput, ExplainInput, LLMProvider, RepairPlanInput } from "@/lib/ai/provider";
 
 export const REVENUE_QUESTION = "Which products generated the most revenue in 2025?";
 export const MONTHLY_TREND_QUESTION = "How did revenue change each month in 2025?";
@@ -75,6 +76,7 @@ const DEFAULT_PLANS: Record<string, AnalysisPlan> = {
 export type MockLLMOptions = {
   plans?: Record<string, AnalysisPlan>;
   explain?: (input: ExplainInput) => string | Promise<string>;
+  repair?: (input: RepairPlanInput) => AnalysisPlan | Promise<AnalysisPlan>;
 };
 
 export class MockLLMProvider implements LLMProvider {
@@ -82,7 +84,7 @@ export class MockLLMProvider implements LLMProvider {
 
   constructor(private readonly options: MockLLMOptions = {}) {}
 
-  async createPlan(input: { question: string }): Promise<AnalysisPlan> {
+  async createPlan(input: CreatePlanInput): Promise<AnalysisPlan> {
     const plan = { ...DEFAULT_PLANS, ...this.options.plans }[input.question.trim()];
     if (!plan) {
       throw new AnalysisFailure({
@@ -93,6 +95,23 @@ export class MockLLMProvider implements LLMProvider {
     }
 
     return structuredClone(plan);
+  }
+
+  async repairPlan(input: RepairPlanInput): Promise<AnalysisPlan> {
+    if (this.options.repair) {
+      return this.options.repair(input);
+    }
+
+    const parsed = analysisPlanSchema.safeParse(input.invalidPlan);
+    if (!parsed.success) {
+      throw new AnalysisFailure({
+        stage: "plan",
+        message: "The analysis plan did not match the required shape.",
+        details: { code: "invalid_plan", issues: parsed.error.issues },
+      });
+    }
+
+    return parsed.data;
   }
 
   async explain(input: ExplainInput): Promise<string> {
