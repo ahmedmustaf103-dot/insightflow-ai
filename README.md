@@ -2,7 +2,7 @@
 
 Ask a question about a CSV. A model plans the analysis and explains the result. Pandas calculates it.
 
-Phase 1 profiles a CSV and runs a closed Pandas catalog (`aggregate`, `trend`, `detail`). Phase 2 orchestrates that catalog with validation and a mock model. Phase 3 adds a Gemini provider behind the same interface. There is no upload UI or database yet.
+Phase 1 profiles a CSV and runs a closed Pandas catalog (`aggregate`, `trend`, `detail`). Phase 2 orchestrates that catalog with validation and a mock model. Phase 3 adds a Gemini provider behind the same interface. Phase 4 is the product UI: upload a CSV, ask a question, and review the verified answer, chart, and evidence. There is no authentication or database.
 
 ## Architecture
 
@@ -51,6 +51,14 @@ python3 -m venv .venv
 ```
 
 Requires Python 3.11+. The TypeScript runner uses `.venv/bin/python` when `PYTHON_PATH` is unset.
+
+## App
+
+```bash
+npm run dev
+```
+
+Open the app, upload a CSV, and ask a question. `GEMINI_API_KEY` is required for live analysis. Copy `.env.example` to `.env.local` and do not commit the key.
 
 ## Checks
 

@@ -22,11 +22,14 @@ Omit optional fields instead of sending null.`;
 
 export const REPAIR_SYSTEM = `${PLAN_SYSTEM}
 
-The previous plan was rejected. Return a corrected AnalysisPlan that fixes every validation error. Do not repeat the rejected plan.`;
+The previous plan was rejected. Return a corrected AnalysisPlan that fixes every validation error. Do not repeat the rejected plan.
+If a column in the question is not in the dataset profile, do not substitute a different column or metric. Keep the unavailable column so the plan can be rejected.`;
 
 export const EXPLANATION_SYSTEM = `Answer the user's question using only the supplied AnalysisResult. Do not calculate new values. Do not introduce numerical values that are not present in the result. If the result is empty, explicitly state that no matching records were found.
 
-Copy category labels and metric values from the result rows. Do not restate numbers from the question, including years, unless that exact value is a result cell. Keep the answer concise. Do not produce a chart specification.`;
+Copy category labels and metric values from the result rows. A number is allowed only when it appears as a numeric result cell or as the result row count.
+Do not restate years, dates, or amounts from the question or the analysis plan. Plan dates such as 2025-01-01 are not result values. If you need to mention the filtered period, call it "the filtered period" and do not write the year.
+Keep the answer concise. Do not produce a chart specification.`;
 
 export function planPrompt(question: string, profile: DatasetProfile): string {
   return [
