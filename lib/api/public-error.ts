@@ -18,7 +18,10 @@ export function toPublicError(error: unknown): { status: number; body: PublicErr
   }
 
   if (error instanceof AnalysisFailure) {
-    return { status: statusFor(error), body: { error: messageFor(error) } };
+    return {
+      status: statusFor(error),
+      body: { error: { ...messageFor(error), stage: error.error.stage } },
+    };
   }
 
   return {
@@ -63,6 +66,25 @@ function messageFor(error: AnalysisFailure): PublicErrorBody["error"] {
     return {
       title: "We couldn't analyse that question.",
       message: `The requested column "${column}" isn't present in this dataset.`,
+    };
+  }
+
+  if (code === "unsupported_request") {
+    const role = detailString(error, "role");
+    const concept = detailString(error, "concept");
+    if (role && concept && (role === "metric" || role === "dimension" || role === "filter")) {
+      return {
+        title: "We couldn't analyse that question.",
+        message: `The requested ${role} '${concept}' is not available in this dataset.`,
+      };
+    }
+  }
+
+  if (code === "intent_mismatch") {
+    const message = detailString(error, "publicMessage");
+    return {
+      title: "We couldn't analyse that question.",
+      message: message ?? "The analysis does not answer the question that was asked.",
     };
   }
 
@@ -144,10 +166,15 @@ function detailCode(error: AnalysisFailure): string | undefined {
 }
 
 function detailColumn(error: AnalysisFailure): string | undefined {
+  const column = detailString(error, "column");
+  return column && /^[\w .'-]+$/.test(column) ? column : undefined;
+}
+
+function detailString(error: AnalysisFailure, key: string): string | undefined {
   const details = error.error.details;
-  if (!details || typeof details !== "object" || Array.isArray(details) || !("column" in details)) {
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
     return undefined;
   }
-  const column = details.column;
-  return typeof column === "string" && /^[\w .'-]+$/.test(column) ? column : undefined;
+  const value = (details as Record<string, unknown>)[key];
+  return typeof value === "string" && value.length > 0 && value.length < 240 && !/[\\/]/.test(value) ? value : undefined;
 }

@@ -31,7 +31,9 @@ describe("verify-claims", () => {
   });
 
   it("accepts currency, thousands separators, and decimal formatting", () => {
+    expect(() => verifyClaims({ answer: "Sensor generated £500.", result, profile })).not.toThrow();
     expect(() => verifyClaims({ answer: "Sensor generated £500.00 and Gadget generated £1,250.50.", result, profile })).not.toThrow();
+    expect(() => verifyClaims({ answer: "Sensor revenue was 500.00.", result, profile })).not.toThrow();
   });
 
   it("accepts a value rounded to the decimals written in the answer", () => {

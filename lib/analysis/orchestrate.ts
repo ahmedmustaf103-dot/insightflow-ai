@@ -9,6 +9,7 @@ import {
   type AnalysisResponse,
   type DatasetProfile,
 } from "@/lib/analysis/types";
+import { preserveIntent } from "@/lib/analysis/intent";
 import { validateAnalysisPlan } from "@/lib/analysis/validate-plan";
 import { validateAnalysisResult } from "@/lib/analysis/validate-result";
 import { verifyClaims } from "@/lib/analysis/verify-claims";
@@ -78,7 +79,7 @@ async function resolvePlan(
   profile: DatasetProfile,
   limits: AnalysisLimits,
 ): Promise<AnalysisPlan> {
-  const first = assess(await callForPlan(() => llm.createPlan({ question, profile })), profile, limits);
+  const first = assess(await callForPlan(() => llm.createPlan({ question, profile })), question, profile, limits);
   if (first.ok) {
     return first.plan;
   }
@@ -92,6 +93,7 @@ async function resolvePlan(
         errors: first.errors,
       }),
     ),
+    question,
     profile,
     limits,
   );
@@ -120,7 +122,7 @@ async function callForPlan(call: () => Promise<unknown>): Promise<unknown> {
   }
 }
 
-function assess(raw: unknown, profile: DatasetProfile, limits: AnalysisLimits): PlanAttempt {
+function assess(raw: unknown, question: string, profile: DatasetProfile, limits: AnalysisLimits): PlanAttempt {
   const parsed = analysisPlanSchema.safeParse(raw);
   if (!parsed.success) {
     const failure = new AnalysisFailure({
@@ -133,6 +135,7 @@ function assess(raw: unknown, profile: DatasetProfile, limits: AnalysisLimits): 
 
   try {
     validateAnalysisPlan(parsed.data, profile, limits);
+    preserveIntent(question, parsed.data, profile);
   } catch (error) {
     if (error instanceof AnalysisFailure) {
       return {

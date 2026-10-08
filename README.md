@@ -1,22 +1,55 @@
 # InsightFlow AI
 
-Ask a question about a CSV. A model plans the analysis and explains the result. Pandas calculates it.
+Ask a question about a CSV. Pandas calculates the answer. A model only plans the analysis and explains the result.
 
-Phase 1 profiles a CSV and runs a closed Pandas catalog (`aggregate`, `trend`, `detail`). Phase 2 orchestrates that catalog with validation and a mock model. Phase 3 adds a Gemini provider behind the same interface. Phase 4 is the product UI: upload a CSV, ask a question, and review the verified answer, chart, and evidence. There is no authentication or database.
+## Problem
+
+Businesses often have useful CSV data but need technical knowledge to analyse it.
+
+## Solution
+
+InsightFlow lets users ask questions about datasets in natural language. The user uploads one CSV, asks a question, and receives an answer together with the rows, filters, and chart that support it.
 
 ## Architecture
 
-### Why the LLM does not calculate
+```text
+CSV
+ ↓
+Pandas profiling
+ ↓
+DatasetProfile
+ ↓
+Gemini structured AnalysisPlan
+ ↓
+Plan validation
+ ↓
+Closed Pandas operation catalog
+ ↓
+AnalysisResult
+ ↓
+Result validation
+ ↓
+Gemini explanation
+ ↓
+Numerical claim verification
+ ↓
+Deterministic chart selection
+ ↓
+Answer + evidence
+```
 
-The LLM produces a structured analysis plan, while deterministic Pandas operations perform the actual calculation. Gemini can read the question and the dataset profile, propose an `AnalysisPlan`, and later explain a validated `AnalysisResult`. It does not receive the raw CSV, generate Python, execute code, or choose the chart.
+Plan validation checks the plan shape, the dataset profile, and the user's intent. A plan that names a missing column is rejected. A plan that is valid on its own but answers a different question, such as summing revenue when the user asked for profit, is also rejected. Nothing is calculated until the plan still represents the request.
 
-### Why validation exists
-
-Plans are validated against the dataset profile before execution. Results are validated before explanation. Numerical claims are checked against the executed result before being returned. If the first plan is invalid, the orchestrator makes one repair request and then stops. A failed repair does not execute Python and does not invent an answer.
-
-A normal question uses two Gemini calls: one plan and one explanation. An invalid first plan adds one repair call. That is the maximum.
-
-### Provider architecture
+```text
+User intent
+ ↓
+AI plan
+ ↓
+Does the plan actually answer the user's request?
+ ↓
+YES → execute
+NO  → reject
+```
 
 ```text
 LLMProvider
@@ -24,23 +57,31 @@ LLMProvider
 └── GeminiLLMProvider
 ```
 
-The orchestrator depends on `LLMProvider` only, so the AI layer is replaceable and testable. Unit tests use `MockLLMProvider` and do not need an API key. `GEMINI_API_KEY` stays on the server. `GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`.
+## Key engineering decisions
 
-Live pipeline:
+- The LLM does not calculate numbers.
+- Pandas performs the deterministic calculations.
+- Arbitrary generated Python is prohibited. The model never reaches `exec`, `eval`, or a shell command.
+- Plans are validated before execution.
+- Results are validated before explanation.
+- Numerical claims are checked before display.
+- Charts are derived from validated results.
+- The mock provider allows the full pipeline to be tested without an API key.
+- Gemini sits behind the `LLMProvider` abstraction, alongside the mock provider.
+- Only one plan repair is permitted, and a repair cannot turn an unsupported question into a different supported question.
 
-```text
-question
- → Gemini plan
- → Zod validation
- → semantic plan validation
- → one repair attempt if required
- → Pandas execution
- → result validation
- → Gemini explanation
- → claim verification
- → deterministic chart selection
- → AnalysisResponse
-```
+A normal question uses two Gemini calls: one plan and one explanation. An invalid first plan adds the single repair call. That is the maximum. `GEMINI_API_KEY` stays on the server. `GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`.
+
+## Known limitations
+
+- CSV only
+- One dataset at a time
+- No authentication
+- No saved history
+- Limited analysis operations: aggregate, trend, and detail
+- No arbitrary Python
+- No derived business metrics, so profit is not inferred from revenue and cost
+- No database persistence
 
 ## Setup
 
@@ -65,9 +106,10 @@ Open the app, upload a CSV, and ask a question. `GEMINI_API_KEY` is required for
 ```bash
 npm run typecheck
 npm test
+npm run lint
 ```
 
-`npm test` never calls Gemini. With `GEMINI_API_KEY` set, `npm run test:live` runs the opted-in revenue question against `tests/fixtures/sales.csv`. Copy `.env.example` to `.env.local` for local live runs. Do not commit the key.
+`npm test` runs the unit tests and the evaluation suite with `MockLLMProvider`. It never calls Gemini. With `GEMINI_API_KEY` set, `npm run test:live` runs the opted-in revenue question against `tests/fixtures/sales.csv`.
 
 ## Demo
 

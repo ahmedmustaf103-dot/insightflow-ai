@@ -16,6 +16,16 @@ Respect column types from the profile. sum, mean, min, and max require a numeric
 
 Use filters when the question specifies a date, region, product, or other value. Date filters use YYYY-MM-DD. A calendar year on a date column is a between filter from YYYY-01-01 to YYYY-12-31.
 
+Never substitute a requested metric with another metric.
+Never substitute a requested column with a semantically similar column.
+Never reinterpret the user's analytical intent to make the question answerable.
+If the requested information cannot be represented using the dataset profile, name the unavailable column in the plan so validation can reject it. Do not invent a substitute.
+Only use columns explicitly present in the dataset profile.
+Do not assume revenue means sales.
+Do not assume revenue means profit.
+Do not infer a missing business concept from an unrelated column.
+Do not calculate derived metrics. Profit is not revenue minus cost unless the dataset already contains the requested metric.
+
 Metric output names are count, or the form agg_column such as sum_revenue. sortBy must be a groupBy column, the trend period column, a selected column, or a metric output name.
 limit is an integer from 1 to ${DEFAULT_LIMITS.maxResultRows}.
 Omit optional fields instead of sending null.`;
@@ -23,7 +33,9 @@ Omit optional fields instead of sending null.`;
 export const REPAIR_SYSTEM = `${PLAN_SYSTEM}
 
 The previous plan was rejected. Return a corrected AnalysisPlan that fixes every validation error. Do not repeat the rejected plan.
-If a column in the question is not in the dataset profile, do not substitute a different column or metric. Keep the unavailable column so the plan can be rejected.`;
+Never substitute a requested metric, column, filter, or analytical intent with a different one to make the question answerable.
+If the requested information is not in the dataset profile, keep the unavailable name in the corrected plan so validation can reject it.
+This is the only repair. Do not turn an unsupported question into a different supported question.`;
 
 export const EXPLANATION_SYSTEM = `Answer the user's question using only the supplied AnalysisResult. Do not calculate new values. Do not introduce numerical values that are not present in the result. If the result is empty, explicitly state that no matching records were found.
 

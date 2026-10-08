@@ -121,8 +121,43 @@ describe("dataset ask", () => {
     expect(body.error).toEqual({
       title: "We couldn't analyse that question.",
       message: 'The requested column "profit" isn\'t present in this dataset.',
+      stage: "validate-plan",
     });
     expect(JSON.stringify(body)).not.toMatch(/\/Users\/|Traceback|python\//);
+  });
+
+  it("rejects a substituted metric with a safe validation error", async () => {
+    const profile = await uploadDataset({
+      fileName: "sales.csv",
+      bytes: await readFile(salesCsv),
+      root,
+    });
+    const response = await handleAskRequest(
+      askRequest(UNKNOWN_COLUMN_QUESTION),
+      profile.datasetId,
+      new MockLLMProvider({
+        plans: {
+          [UNKNOWN_COLUMN_QUESTION]: {
+            operation: "aggregate",
+            filters: [],
+            groupBy: ["product"],
+            metrics: [{ column: "revenue", agg: "sum" }],
+            select: [],
+            limit: 10,
+            rationale: "Sum revenue by product.",
+          },
+        },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toEqual({
+      title: "We couldn't analyse that question.",
+      message: "The requested metric 'profit' is not available in this dataset.",
+      stage: "validate-plan",
+    });
+    expect(JSON.stringify(body)).not.toMatch(/sum_revenue|Sensor|Traceback|\/Users\/|GEMINI/);
   });
 });
 
