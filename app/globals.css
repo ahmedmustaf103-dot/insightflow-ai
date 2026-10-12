@@ -2,13 +2,16 @@
 
 @theme {
   --font-sans: var(--font-ibm), "Segoe UI", sans-serif;
-  --color-ink: #1c1917;
-  --color-muted: #57534e;
-  --color-paper: #f6f3ec;
-  --color-card: #fffcf8;
-  --color-line: #e6dfd4;
-  --color-accent: #0e5c56;
-  --color-accent-hover: #0a4a45;
+  --color-ink: #1e293b;
+  --color-muted: #64748b;
+  --color-paper: #f4f7fb;
+  --color-card: #ffffff;
+  --color-line: #e7edf5;
+  --color-accent: #3b6cf6;
+  --color-accent-hover: #2f5ae0;
+  --color-sidebar: #1d2b6f;
+  --color-positive: #12995a;
+  --color-positive-bg: #e9f8f0;
   --color-warning: #92400e;
   --color-warning-bg: #fff7ed;
   --color-danger: #9f1239;

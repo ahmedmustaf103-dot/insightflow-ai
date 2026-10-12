@@ -100,6 +100,42 @@ describe("sample dataset", () => {
   });
 });
 
+describe("dataset overview", () => {
+  it("builds dashboard cards, a yearly chart, and a ranking from the sales file", async () => {
+    const profile = await uploadDataset({
+      fileName: "sales.csv",
+      bytes: await readFile(salesCsv),
+      root,
+    });
+    const { GET } = await import("@/app/api/datasets/[id]/overview/route");
+    const response = await GET(new Request("http://localhost/api/datasets/sales/overview"), {
+      params: Promise.resolve({ id: profile.datasetId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.cards.map((card: { label: string; value: string }) => [card.label, card.value])).toEqual([
+      ["Records", "22"],
+      ["Total Revenue", "£2,820"],
+      ["Product", "5"],
+      ["Total Quantity", "50"],
+    ]);
+    expect(body.trend).toMatchObject({
+      title: "Overall revenue",
+      period: "2025",
+      total: "£1,405",
+    });
+    expect(body.trend.result.rows.find((row: { period: string }) => row.period === "2025-06")).toMatchObject({
+      sum_revenue: 400,
+    });
+    expect(body.trend.result.rows.find((row: { period: string }) => row.period === "2025-10")).toMatchObject({
+      sum_revenue: 0,
+    });
+    expect(body.ranking.result.rows[0]).toMatchObject({ product: "Sensor", sum_revenue: 500 });
+    expect(JSON.stringify(body)).not.toContain("/Users/");
+  });
+});
+
 describe("dataset ask", () => {
   it("returns an AnalysisResponse for a valid question", async () => {
     const profile = await uploadDataset({
