@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as uploadPost } from "@/app/api/datasets/route";
+import { POST as samplePost } from "@/app/api/datasets/sample/route";
 import { handleAskRequest } from "@/app/api/datasets/[id]/ask/route";
 import { MockLLMProvider, REVENUE_QUESTION, UNKNOWN_COLUMN_QUESTION } from "@/lib/ai/mock";
 import { DEFAULT_LIMITS } from "@/lib/analysis/limits";
@@ -72,6 +73,30 @@ describe("dataset upload", () => {
     const mapped = toPublicError(failure);
     expect(mapped.status).toBe(413);
     expect(mapped.body.error.title).toBe("This file is too large.");
+  });
+});
+
+describe("sample dataset", () => {
+  it("profiles the built-in sales file without an upload", async () => {
+    const response = await samplePost();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      fileName: "sales.csv",
+      rowCount: 22,
+    });
+    expect(body.columns.map((column: { name: string }) => column.name)).toEqual([
+      "product",
+      "revenue",
+      "order_date",
+      "quantity",
+      "region",
+      "entered_on",
+      "legacy_code",
+    ]);
+    expect(body).not.toHaveProperty("rows");
+    expect(JSON.stringify(body)).not.toContain("/Users/");
   });
 });
 

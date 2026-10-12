@@ -6,16 +6,18 @@ import { formatMegabytes, rejectUpload } from "@/lib/datasets/file-rules";
 import { DEFAULT_LIMITS } from "@/lib/analysis/limits";
 import type { PublicErrorBody } from "@/lib/api/error-body";
 
-type UploadPhase = "idle" | "uploading" | "reading";
+type UploadPhase = "idle" | "uploading" | "reading" | "sample";
 
 export function DatasetUpload({
   disabled = false,
   onUploaded,
   uploadFile = uploadDatasetFile,
+  loadSample = loadSampleDataset,
 }: {
   disabled?: boolean;
   onUploaded: (profile: DatasetProfile) => void;
   uploadFile?: (file: File, onProgress: (percent: number) => void) => Promise<DatasetProfile>;
+  loadSample?: () => Promise<DatasetProfile>;
 }) {
   const inputId = useId();
   const [phase, setPhase] = useState<UploadPhase>("idle");
@@ -44,6 +46,19 @@ export function DatasetUpload({
     } catch (caught) {
       setPhase("idle");
       setError(readError(caught));
+    }
+  }
+
+  async function useSample() {
+    if (disabled || phase !== "idle") return;
+    setError(null);
+    setPhase("sample");
+    try {
+      onUploaded(await loadSample());
+      setPhase("idle");
+    } catch (caught) {
+      setPhase("idle");
+      setError(readError(caught, "The sample data could not be loaded. Try again."));
     }
   }
 
@@ -84,13 +99,29 @@ export function DatasetUpload({
           }}
         />
         <span className="text-lg font-medium text-ink">
-          {phase === "uploading" ? `Uploading ${progress}%` : phase === "reading" ? "Reading your dataset" : "Upload your CSV"}
+          {phase === "uploading"
+            ? `Uploading ${progress}%`
+            : phase === "reading"
+              ? "Reading your dataset"
+              : phase === "sample"
+                ? "Loading sample data"
+                : "Upload your CSV"}
         </span>
         <span className="mt-2 max-w-sm text-sm leading-6 text-muted">
           {busy ? "Checking columns, types, and data quality." : "Drag and drop a file here, or browse."}
         </span>
       </label>
-      <p className="text-sm text-muted">Supported: CSV · up to {formatMegabytes(DEFAULT_LIMITS.maxUploadBytes)}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">Supported: CSV · up to {formatMegabytes(DEFAULT_LIMITS.maxUploadBytes)}</p>
+        <button
+          type="button"
+          disabled={disabled || busy}
+          onClick={() => void useSample()}
+          className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink transition hover:border-accent disabled:cursor-default disabled:opacity-40"
+        >
+          Use sample data
+        </button>
+      </div>
       {error ? (
         <div role="alert" className="rounded-xl border border-danger/20 bg-danger-bg px-4 py-3 text-sm text-danger">
           <p className="font-medium">{error.title}</p>
@@ -146,10 +177,20 @@ function isPublicError(value: unknown): value is PublicErrorBody {
   return typeof error?.title === "string" && typeof error.message === "string";
 }
 
-function readError(error: unknown): PublicErrorBody["error"] {
+async function loadSampleDataset(): Promise<DatasetProfile> {
+  const response = await fetch("/api/datasets/sample", { method: "POST" });
+  const payload = (await response.json()) as unknown;
+  if (!isProfile(payload)) {
+    if (isPublicError(payload)) throw payload;
+    throw new Error("sample_failed");
+  }
+  return payload;
+}
+
+function readError(error: unknown, fallback = "The file could not be uploaded. Try again."): PublicErrorBody["error"] {
   if (isPublicError(error)) return error.error;
   return {
-    title: "Upload failed",
-    message: "The file could not be uploaded. Try again.",
+    title: fallback.includes("sample") ? "Couldn't load sample data" : "Upload failed",
+    message: fallback,
   };
 }

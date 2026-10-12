@@ -102,6 +102,17 @@ describe("product UI", () => {
     expect(screen.queryByRole("heading", { name: "sales.csv" })).toBeNull();
   });
 
+  it("loads the sample dataset without a file upload", async () => {
+    const user = userEvent.setup();
+    render(<Workspace uploadFile={async () => profile} loadSample={async () => profile} />);
+
+    await user.click(screen.getByRole("button", { name: "Use sample data" }));
+
+    expect(await screen.findByRole("heading", { name: "sales.csv" })).toBeTruthy();
+    expect(screen.getByText("22 rows · 3 columns")).toBeTruthy();
+    expect(screen.queryByText("Upload your CSV")).toBeNull();
+  });
+
   it("shows the dataset summary after a CSV upload", async () => {
     const user = userEvent.setup();
     render(<Workspace uploadFile={async () => profile} />);

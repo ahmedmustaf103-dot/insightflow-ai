@@ -12,9 +12,11 @@ import { QuestionForm } from "@/components/question-form";
 
 export function Workspace({
   uploadFile,
+  loadSample,
   askQuestion = askDatasetQuestion,
 }: {
   uploadFile?: (file: File, onProgress: (percent: number) => void) => Promise<DatasetProfile>;
+  loadSample?: () => Promise<DatasetProfile>;
   askQuestion?: (datasetId: string, question: string) => Promise<AnalysisResponse>;
 }) {
   const [profile, setProfile] = useState<DatasetProfile | null>(null);
@@ -49,7 +51,7 @@ export function Workspace({
           <div className="max-w-2xl">
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Ask questions about your business data.</h1>
             <p className="mt-4 text-lg leading-8 text-muted">
-              Upload a CSV. InsightFlow plans the analysis, calculates the result, and shows the evidence.
+              Upload a CSV, or try the sample sales data. InsightFlow plans the analysis, calculates the result, and shows the evidence.
             </p>
           </div>
         )}
@@ -59,6 +61,7 @@ export function Workspace({
         ) : (
           <DatasetUpload
             uploadFile={uploadFile}
+            loadSample={loadSample}
             onUploaded={(next) => {
               setProfile(next);
               setResponse(null);
